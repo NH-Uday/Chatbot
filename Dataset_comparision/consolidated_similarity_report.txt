@@ -1,0 +1,29 @@
+IEEE and Scopus similarities: 24
+A Brief Overview of ChatGPT: The History, Status Quo and Potential Future Development
+A Virtual 3D Chemistry Laboratory with an Enhanced AI Chatbot to Facilitate Learning Effectiveness
+AI4S Based on DeSci: Reference Model and Research Issues
+ALANCA: Active Learning Guided Adversarial Attacks for Code Comprehension on Diverse Pre-trained and Large Language Models
+CRB Optimization for Integrated Sensing and Communication Systems Using Hybrid Linear-Nonlinear Precoding
+Chat with ChatGPT on Industry 5.0: Learning and Decision-Making for Intelligent Industries
+ChatGPT in the Classroom: A Shift in Engineering Design Education
+Coded Parallelism for Distributed Deep Learning
+Energy Estimates Across Layers of Computing: From Devices to Large-Scale Applications in Machine Learning for Natural Language Processing, Scientific Computing, and Cryptocurrency Mining1
+Enhancing Soft Skills in Network Management Education: A Study on the Impact of GenAI-Based Virtual Assistants
+Intelligent Virtual Laboratory Development and Implementation using the RASA Framework
+Large Language Models and Adversarial Reinforcement Learning to Automate PLCs Programming: A Preliminary Investigation
+Leveraging Prompt Engineering on ChatGPT for Enhanced Learning in CEC330: Digital System Design in Aerospace
+MediFind - A Medicine Detection Framework for Vietnamese Medical Prescription
+Plagiarism detection based on blinded logical test automation results and detection of textual similarity between source codes
+Pre-training Fine-tuning data Enhancement method based on active learning
+Reconfiguration Strategy for Distribution Network Considering the Impact of External Power Grid
+Remote Sensing ChatGPT: Solving Remote Sensing Tasks with ChatGPT and Visual Models
+Requirements Modeling Aided by ChatGPT: An Experience in Embedded Systems
+Revolutionizing Pandemic Management: A Comprehensive Review and Exploration of Technological Innovations
+SoundSignature: What Type of Music do you Like?
+The ChatGPT After: Building Knowledge Factories for Knowledge Workers with Knowledge Automation
+The Journey/DAO/TAO of Embodied Intelligence: From Large Models to Foundation Intelligence and Parallel Intelligence
+When Does Sora Show: The Beginning of TAO to Imaginative Intelligence and Scenarios Engineering
+
+IEEE and ScienceDirect similarities: 0
+
+Scopus and ScienceDirect similarities: 0
