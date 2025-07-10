@@ -1,1 +1,2 @@
 server/.env
+server/waviate_rag/env/

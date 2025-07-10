@@ -3,26 +3,31 @@
 import { useState } from "react";
 import axios from "axios";
 
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export default function ChatPage() {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: input };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:3001/chat", {
-        messages: newMessages,
+      const response = await axios.post("http://localhost:8000/chat", {
+        question: input,
       });
 
-      const reply = response.data.reply;
+      const reply: Message = { role: "assistant", content: response.data.answer };
       setMessages([...newMessages, reply]);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -34,7 +39,9 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-blue-50 p-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-center text-blue-800 mb-6">AI Study Companion</h1>
+        <h1 className="text-3xl font-bold text-center text-blue-800 mb-6">
+          AI Study Companion
+        </h1>
 
         <div className="space-y-6">
           {messages.map((msg, index) => (
@@ -46,11 +53,15 @@ export default function ChatPage() {
             >
               {msg.role === "assistant" ? (
                 <div className="space-y-3">
-                  {msg.content.split(/(?=\n\*\*\u{1F4A1}|\*\*\u{2696}|\*\*\u{1F680})/u).map((section, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-lg">
-                      <p className="whitespace-pre-wrap text-gray-800">{section.trim()}</p>
-                    </div>
-                  ))}
+                  {msg.content
+                    .split(/\n(?=🧠|⚖️|🚀)/)
+                    .map((section: string, idx: number) => (
+                      <div key={idx} className="bg-white p-3 rounded-lg">
+                        <p className="whitespace-pre-wrap text-gray-800">
+                          {section.trim()}
+                        </p>
+                      </div>
+                    ))}
                 </div>
               ) : (
                 <p className="text-blue-800 font-semibold">{msg.content}</p>
