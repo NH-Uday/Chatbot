@@ -1,38 +1,34 @@
-# weaviate_rag/app/services/weaviate_setup.py
 import weaviate
-import os
+from weaviate.classes.config import Property, DataType
 from dotenv import load_dotenv
 
 load_dotenv()
 
-WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
-
-client = weaviate.Client(
-    url=WEAVIATE_URL,
-    additional_headers={"X-OpenAI-Api-Key": os.getenv("OPENAI_API_KEY")}
+client = weaviate.connect_to_local(
+    host="localhost",
+    port=8080,
+    grpc_port=50051,
+    skip_init_checks=True,
 )
 
 def init_schema():
     class_name = "LectureChunk"
 
-    if client.schema.exists(class_name):
+    existing_collections = client.collections.list_all()
+
+    if class_name in existing_collections:
+        print(f"ℹ️ Schema '{class_name}' already exists.")
         return
 
-    schema = {
-        "class": class_name,
-        "description": "A chunk of a lecture or technical PDF",
-        "vectorizer": "none",
-        "properties": [
-            {
-                "name": "text",
-                "dataType": ["text"],
-            },
-            {
-                "name": "source",
-                "dataType": ["text"],
-            },
+    client.collections.create(
+        name=class_name,
+        properties=[
+            Property(name="text", data_type=DataType.TEXT),
+            Property(name="source", data_type=DataType.TEXT),
+            Property(name="page", data_type=DataType.INT),
         ],
-    }
+        # No vectorizer specified — this uses the default ('none' is not supported in 4.16.8)
+        description="A chunk of a lecture or technical PDF",
+    )
 
-    client.schema.create_class(schema)
     print(f"✅ Created schema for '{class_name}'")

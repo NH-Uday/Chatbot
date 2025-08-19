@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+     "build-index": "cross-env DOC_DIR=weaviate_rag/docs node --max-old-space-size=8192 weaviate_rag/scripts/build-index.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +16,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "openai": "^5.7.0"
+    "openai": "^5.7.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "cross-env": "^10.0.0"
   }
 }

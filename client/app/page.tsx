@@ -40,7 +40,7 @@ export default function ChatPage() {
     <div className="min-h-screen bg-gradient-to-br from-white to-blue-50 p-4">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-center text-blue-800 mb-6">
-          AI Study Companion
+          Chatbot cmpanion for Lab
         </h1>
 
         <div className="space-y-6">

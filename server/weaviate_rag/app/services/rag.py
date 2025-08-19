@@ -4,67 +4,82 @@ from openai import OpenAI
 from app.services.weaviate_setup import client
 
 load_dotenv()
-openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-CLASS_NAME = "LectureChunk"
-TOP_K = 5
-CONFIDENCE_THRESHOLD = 0.75
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+WEAVIATE_COLLECTION = "LectureChunk"
 
+oa = OpenAI(api_key=OPENAI_API_KEY)
+
+# --- system prompt for the assistant ---
 SYSTEM_PROMPT = """
-You are an inspiring AI tutor.
-When answering a question, structure your response in 3 clearly titled parts:
+You are a helpful and inspiring study assistant for engineering/science topics.
+Use ONLY the provided context. If the answer is not in the context, say "This question is out of my knowledge domain."
 
-🧠 Clarity
-Give a straightforward, understandable explanation.
+Format every answer with exactly these three sections:
 
-⚖️ Contrast (if applicable)
-Compare with related or traditional concepts to enhance understanding.
+1. **Explain** – Explain the topic or equation clearly and precisely using the context.
+2. **Compare** – Compare it with closely related ideas/equations/topics (from the context when possible).
+3. **Motivate** – Encourage further study: why it matters, typical applications, or next steps.
 
-🚀 Motivational Close
-End with an encouraging message. Include 3–5 related subtopics or follow-up study suggestions that the user can explore next. Format as a bullet list.
+Be concise but rigorous. Avoid content not supported by the context.
 """
 
-def retrieve_answer(question: str) -> str:
-    # Embed the user's question
-    query_embedding = openai.embeddings.create(
-        input=question,
+def _retrieve_chunks(query: str, k: int = 6):
+    embedded_query = oa.embeddings.create(
+        input=query,
         model="text-embedding-3-small"
     ).data[0].embedding
 
-    # Query Weaviate for relevant chunks with certainty
-    result = (
-        client.query.get(CLASS_NAME, ["text", "source"])
-        .with_near_vector({"vector": query_embedding})
-        .with_limit(TOP_K)
-        .with_additional(["certainty"])
-        .do()
+    coll = client.collections.get(WEAVIATE_COLLECTION)
+
+    res = coll.query.hybrid(
+        query=query,
+        vector=embedded_query,
+        limit=k,
+        alpha=0.5
     )
 
-    chunks = result.get("data", {}).get("Get", {}).get(CLASS_NAME, [])
-    top_certainty = chunks[0]["_additional"].get("certainty", 0) if chunks else 0
+    # ✅ Now returning full metadata
+    return [
+        {
+            "text": obj.properties.get("text", "").strip(),
+            "source": obj.properties.get("source", "unknown"),
+            "page": obj.properties.get("page", "?")
+        }
+        for obj in res.objects
+    ]
 
-    if not chunks or top_certainty < CONFIDENCE_THRESHOLD:
-        # Fallback to general answer without context
-        fallback_response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            temperature=0.7,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": question},
-            ]
+
+def retrieve_answer(question: str) -> str:
+    retrieved_chunks = _retrieve_chunks(question)
+    chunks = [c["text"] for c in retrieved_chunks if c["text"]]
+
+    if not chunks:
+        return (
+            "1. **Explain** – I don't know based on the provided materials.\n\n"
+            "2. **Compare** – I don't know based on the provided materials.\n\n"
+            "3. **Motivate** – I don't know based on the provided materials."
         )
-        return fallback_response.choices[0].message.content.strip()
 
-    # Otherwise, use lecture context
-    context = "\n\n".join([c["text"] for c in chunks])
+    context = "\n\n---\n\n".join(chunks)
 
-    completion = openai.chat.completions.create(
-        model="gpt-3.5-turbo",
-        temperature=0.7,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
-        ]
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Question: {question}\n\nContext:\n{context}"}
+    ]
+
+    resp = oa.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=messages,
+        temperature=0
     )
 
-    return completion.choices[0].message.content.strip()
+    answer = resp.choices[0].message.content
+
+    sources = "\n".join(
+        f"- From **{c['source']}**, page {c['page']}" for c in retrieved_chunks
+    )
+
+    return f"{answer}\n\n---\n**Sources:**\n{sources}"
+

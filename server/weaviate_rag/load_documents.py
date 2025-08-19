@@ -1,6 +1,7 @@
 import os
 from app.services.embedder import embed_and_store
-from app.services.weaviate_setup import init_schema
+from app.services.weaviate_setup import init_schema, client
+
 
 PDF_FOLDER = os.path.join(os.path.dirname(__file__), "docs")
 
@@ -15,6 +16,8 @@ def load_all_pdfs():
         if file.lower().endswith(".pdf"):
             pdf_path = os.path.join(PDF_FOLDER, file)
             embed_and_store(pdf_path)
+            
+    client.close()
 
 if __name__ == "__main__":
     load_all_pdfs()

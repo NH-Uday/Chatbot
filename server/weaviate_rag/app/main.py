@@ -20,3 +20,4 @@ class ChatRequest(BaseModel):
 async def chat_endpoint(req: ChatRequest):
     answer = retrieve_answer(req.question)
     return {"answer": answer}
+
