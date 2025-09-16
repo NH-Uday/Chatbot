@@ -26,6 +26,7 @@ def init_schema():
             Property(name="text", data_type=DataType.TEXT),
             Property(name="source", data_type=DataType.TEXT),
             Property(name="page", data_type=DataType.INT),
+            Property(name="imagePath", data_type=DataType.TEXT),
         ],
         # No vectorizer specified — this uses the default ('none' is not supported in 4.16.8)
         description="A chunk of a lecture or technical PDF",

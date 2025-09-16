@@ -1,0 +1,88 @@
+# 1) Backup the broken script
+mv run.sh run.bad
+
+# 2) Create a clean run.sh (copy-paste the block below)
+cat > run.sh <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# --- Config (edit paths if needed) ---
+BACKEND_DIR="./backend"
+FRONTEND_DIR="./client"     # or "./frontend"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+
+log() { echo -e "[$(date '+%H:%M:%S')] $*"; }
+
+# Pick compose command (v2 or legacy)
+if command -v docker compose >/dev/null 2>&1; then
+  COMPOSE() { docker compose "$@"; }
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE() { docker-compose "$@"; }
+else
+  echo "❌ Docker Compose not found. Install Docker Desktop or 'brew install docker-compose'." >&2
+  exit 1
+fi
+
+# --- Start Weaviate (detached) ---
+log "Starting Weaviate (detached)…"
+COMPOSE up -d weaviate >/dev/null || true
+
+# --- Wait for Weaviate to be READY ---
+log "Waiting for Weaviate to report READY on :8080…"
+for i in {1..60}; do
+  if curl -fsS http://localhost:8080/v1/.well-known/ready >/dev/null; then
+    log "Weaviate is READY ✅"
+    break
+  fi
+  sleep 1
+  if [[ $i -eq 60 ]]; then
+    log "Weaviate did not become ready in time ❌"
+    COMPOSE logs --tail 100 weaviate || true
+    exit 1
+  fi
+done
+
+# --- Start backend ---
+log "Starting FastAPI backend on :$BACKEND_PORT…"
+pushd "$BACKEND_DIR" >/dev/null
+if [[ -d ".venv" ]]; then
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+fi
+uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload &
+BACKEND_PID=$!
+popd >/dev/null
+
+# --- Start frontend ---
+log "Starting Next.js frontend on :$FRONTEND_PORT…"
+pushd "$FRONTEND_DIR" >/dev/null
+npm run dev &
+FRONTEND_PID=$!
+popd >/dev/null
+
+# --- Open browser ---
+sleep 2
+command -v open >/dev/null 2>&1 && open "http://localhost:$FRONTEND_PORT" || true
+
+# --- Cleanup on exit ---
+cleanup() {
+  log "Stopping frontend/backend…"
+  kill "$FRONTEND_PID" "$BACKEND_PID" 2>/dev/null || true
+  log "Stopping Weaviate…"
+  COMPOSE down
+}
+trap cleanup EXIT
+
+wait
+BASH
+
+# 3) Ensure LF endings (strip any CRs just in case)
+sed -i '' -e 's/\r$//' run.sh
+
+# 4) Make executable & syntax-check
+chmod +x run.sh
+bash -n run.sh
+
+# 5) Run with bash
+bash ./run.sh
