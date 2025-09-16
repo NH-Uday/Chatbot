@@ -14,7 +14,7 @@ from PIL import Image
 from app.services.weaviate_setup import init_schema, client
 from app.services.format_math_equation import format_equations_for_mathjax
 
-# ---- Optional: image extraction via PyMuPDF (skips if not installed) ----
+
 try:
     import fitz  # PyMuPDF
     HAS_PYMUPDF = True
@@ -35,8 +35,8 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))       # words
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
-# Static folder where images will be written (served by FastAPI at /static)
-# embedder.py is at: app/services/embedder.py  → go up twice to project root
+# Static folder for written images
+# embedder.py is at: app/services/embedder.py 
 STATIC_FIG_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "static", "figures")
 )
