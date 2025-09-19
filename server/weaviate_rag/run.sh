@@ -40,7 +40,7 @@ LAN_IP="${LAN_IP:-127.0.0.1}"
 # These env vars are read by next.config.ts
 export SITE_HOST="$LAN_IP"
 # export BACKEND_ORIGIN="http://localhost:${BACKEND_PORT}"
-export BACKEND_ORIGIN="http://132.195.142.65:${BACKEND_PORT}"
+export BACKEND_ORIGIN="http://${LAN_IP}:${BACKEND_PORT}"
 
 # --- Start Weaviate (detached) ---
 log "Starting Weaviate (detached)…"
@@ -50,7 +50,7 @@ COMPOSE up -d weaviate >/dev/null || true
 log "Waiting for Weaviate to report READY on :8080…"
 for i in {1..60}; do
   # if curl -fsS http://localhost:8080/v1/.well-known/ready >/dev/null; then
-  if curl -fsS http://132.195.142.65:8080/v1/.well-known/ready >/dev/null; then
+  if curl -fsS http://localhost:8080/v1/.well-known/ready >/dev/null; then
     log "Weaviate is READY ✅"
     break
   fi
@@ -101,7 +101,7 @@ popd >/dev/null
 # --- Open browser (local machine) ---
 sleep 2
 # command -v open >/dev/null 2>&1 && open "http://localhost:$FRONTEND_PORT" || true
-command -v open >/dev/null 2>&1 && open "http://132.195.142.65:$FRONTEND_PORT" || true
+command -v open >/dev/null 2>&1 && open "http://${LAN_IP}:$FRONTEND_PORT" || true
 
 # --- Cleanup on exit (Ctrl+C, TERM, normal exit) ---
 cleanup() {

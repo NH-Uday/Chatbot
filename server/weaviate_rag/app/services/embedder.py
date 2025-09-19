@@ -14,7 +14,7 @@ from PIL import Image
 from app.services.weaviate_setup import init_schema, client
 from app.services.format_math_equation import format_equations_for_mathjax
 
-
+# ---- PyMuPDF (for image extraction + page rendering) ----
 try:
     import fitz  # PyMuPDF
     HAS_PYMUPDF = True
@@ -35,8 +35,8 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))       # words
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
-# Static folder for written images
-# embedder.py is at: app/services/embedder.py 
+# Static folder for written images (FastAPI must serve /static)
+# embedder.py is at: app/services/embedder.py  → go up two levels to project root
 STATIC_FIG_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "static", "figures")
 )
@@ -52,6 +52,10 @@ CAPTION_REQUEST_DELAY_SEC = float(os.getenv("CAPTION_REQUEST_DELAY_SEC", "0.35")
 # Retry settings for 429s / transient errors
 MAX_RETRIES = int(os.getenv("CAPTION_MAX_RETRIES", "6"))
 BACKOFF_BASE = float(os.getenv("CAPTION_BACKOFF_BASE", "0.6"))  # seconds
+
+# ✅ NEW: render settings for vector-only pages (flowcharts/diagrams)
+RENDER_DPI = int(os.getenv("RENDER_DPI", "180"))  # 144–200 is fine
+
 
 # ----------------- Helpers -----------------
 def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
@@ -155,6 +159,10 @@ def _save_image_png(im: Image.Image, out_name: str) -> str:
     Save PIL image to STATIC_FIG_DIR as PNG and return the relative web path (/static/figures/filename.png)
     """
     out_path = os.path.join(STATIC_FIG_DIR, out_name)
+    # optional: downscale very large images to keep sizes reasonable
+    if max(im.size) > 1800:
+        scale = 1800 / float(max(im.size))
+        im = im.resize((int(im.size[0] * scale), int(im.size[1] * scale)))
     im.save(out_path, format="PNG")
     # web path your FastAPI will serve
     return f"/static/figures/{out_name}"
@@ -162,6 +170,7 @@ def _save_image_png(im: Image.Image, out_name: str) -> str:
 def _extract_images_with_pymupdf(pdf_path: str) -> Iterable[Tuple[int, Image.Image]]:
     """
     Yields (page_number_1_based, PIL_Image). Skips if PyMuPDF unavailable.
+    Extracts embedded raster images (not vector graphics).
     """
     if not HAS_PYMUPDF:
         return
@@ -199,6 +208,25 @@ def _extract_images_with_pymupdf(pdf_path: str) -> Iterable[Tuple[int, Image.Ima
     finally:
         doc.close()
 
+# ✅ NEW: render a full page to capture vector diagrams/flowcharts
+def _render_page_to_png(pdf_path: str, page_number_1based: int) -> Image.Image | None:
+    """
+    Render a full PDF page to a raster image (captures vector flowcharts/diagrams).
+    Returns a PIL.Image or None if PyMuPDF isn't available.
+    """
+    if not HAS_PYMUPDF:
+        return None
+    doc = fitz.open(pdf_path)
+    try:
+        page = doc[page_number_1based - 1]
+        zoom = RENDER_DPI / 72.0  # 72 dpi baseline
+        mat = fitz.Matrix(zoom, zoom)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    finally:
+        doc.close()
+
+
 # ----------------- Main API -----------------
 def embed_and_store(pdf_path: str):
     filename = os.path.basename(pdf_path)
@@ -216,12 +244,16 @@ def embed_and_store(pdf_path: str):
 
     # ---- Images: save + (optional) caption + index
     if HAS_PYMUPDF:
+        pages_with_raster = set()  # track pages that yielded raster images
+
+        # 1) embedded raster images (if any)
         for page_number, pil_img in _extract_images_with_pymupdf(pdf_path):
             try:
                 # Save PNG to /static/figures and get a web path we can render in the UI
                 base = os.path.splitext(filename)[0]
                 out_name = f"{base}_p{page_number}.png"
                 image_web_path = _save_image_png(pil_img, out_name)
+                pages_with_raster.add(page_number)
 
                 if ENABLE_IMAGE_CAPTIONS:
                     # Smooth out bursts
@@ -260,6 +292,31 @@ def embed_and_store(pdf_path: str):
                 print(f"⚠️  Skipped an image on page {page_number}: {e}")
             except Exception as e:
                 print(f"⚠️  Skipped an image on page {page_number}: {e}")
+
+        # 2) Fallback: render any page that had no raster images (captures vector diagrams/flowcharts)
+        try:
+            if HAS_PYMUPDF:
+                doc = fitz.open(pdf_path)
+                try:
+                    base = os.path.splitext(filename)[0]
+                    for pno in range(1, doc.page_count + 1):
+                        if pno in pages_with_raster:
+                            continue  # already have a raster image saved for this page
+                        rendered = _render_page_to_png(pdf_path, pno)
+                        if rendered is None:
+                            continue
+                        out_name = f"{base}_p{pno}_render.png"
+                        image_web_path = _save_image_png(rendered, out_name)
+                        _insert_metadata_only(collection, {
+                            "text": "[Figure]",
+                            "source": filename,
+                            "page": pno,
+                            "imagePath": image_web_path,
+                        })
+                finally:
+                    doc.close()
+        except Exception as e:
+            print(f"⚠️  Page-render fallback failed: {e}")
 
     print(f"✅ Finished indexing: {filename}")
 

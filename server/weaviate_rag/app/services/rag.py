@@ -14,7 +14,7 @@ STATIC_FIG_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "static", "figures")
 )
 
-STATIC_BASE_URL = os.getenv("STATIC_BASE_URL", "http://localhost:8000")
+STATIC_BASE_URL = os.getenv("STATIC_BASE_URL", "http://132.195.142.65:8000")
 
 oa = OpenAI(api_key=OPENAI_API_KEY)
 
