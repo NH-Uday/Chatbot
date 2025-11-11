@@ -1,9 +1,8 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState, useEffect, KeyboardEvent } from 'react';
+import axios from 'axios';
 
-// 🔒 Extend window to support MathJax types
 declare global {
   interface Window {
     MathJax?: {
@@ -13,46 +12,70 @@ declare global {
 }
 
 type Message = {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
 };
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_ORIGIN || 'http://localhost:8000';
+
 export default function ChatPage() {
-  const [input, setInput] = useState<string>("");
+  const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // ✅ Re-render MathJax equations when messages change
+  // Re-render MathJax equations when messages change (client-side only)
   useEffect(() => {
-    if (window.MathJax && typeof window.MathJax.typeset === "function") {
+    if (typeof window !== 'undefined' && window.MathJax?.typeset) {
       window.MathJax.typeset();
     }
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
-    const userMessage: Message = { role: "user", content: input };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput("");
+    const text = input.trim();
+    const userMessage: Message = { role: 'user', content: text };
+
+    // Optimistically append user message
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8000/chat", {
-        question: input,
+      const response = await axios.post(`${API_BASE}/chat`, {
+        question: text,
       });
 
+      const answer =
+        (response.data && (response.data.answer || response.data.response)) ||
+        'I did not receive a response from the backend.';
+
       const reply: Message = {
-        role: "assistant",
-        content: response.data.answer,
+        role: 'assistant',
+        content: answer,
       };
 
-      setMessages([...newMessages, reply]);
+      setMessages((prev) => [...prev, reply]);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error('Error sending message:', error);
+
+      const errorReply: Message = {
+        role: 'assistant',
+        content:
+          '⚠️ I could not reach the backend. Please check that the API is running and accessible.',
+      };
+
+      setMessages((prev) => [...prev, errorReply]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -63,52 +86,57 @@ export default function ChatPage() {
           Chatbot companion for Lab
         </h1>
 
+        {/* Messages */}
         <div className="space-y-6">
           {messages.map((msg, index) => (
             <div
               key={index}
               className={`p-4 rounded-xl shadow-md ${
-                msg.role === "user"
-                  ? "bg-white text-right"
-                  : "bg-blue-100 text-left"
+                msg.role === 'user'
+                  ? 'bg-white text-right'
+                  : 'bg-blue-100 text-left'
               }`}
             >
-              {msg.role === "assistant" ? (
+              {msg.role === 'assistant' ? (
                 <div className="space-y-3">
                   {msg.content
                     .split(/\n(?=🧠|⚖️|🚀)/)
-                    .map((section: string, idx: number) => (
+                    .map((section, idx) => (
                       <div key={idx} className="bg-white p-3 rounded-lg">
-                        {/* ✅ Renders LaTeX as HTML */}
                         <p
                           className="text-sm whitespace-pre-wrap"
-                          dangerouslySetInnerHTML={{ __html: section.trim() }}
+                          dangerouslySetInnerHTML={{
+                            __html: section.trim(),
+                          }}
                         />
                       </div>
                     ))}
                 </div>
               ) : (
-                <p className="text-blue-800 font-semibold">{msg.content}</p>
+                <p className="text-blue-800 font-semibold">
+                  {msg.content}
+                </p>
               )}
             </div>
           ))}
         </div>
 
+        {/* Input */}
         <div className="mt-6 flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            onKeyDown={handleKeyDown}
             placeholder="Ask a question..."
             className="flex-1 p-3 border border-blue-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
             onClick={sendMessage}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition disabled:opacity-60"
           >
-            {loading ? "..." : "Send"}
+            {loading ? '...' : 'Send'}
           </button>
         </div>
       </div>
