@@ -1,2 +1,72 @@
-server/.env
-server/waviate_rag/env/
+# ========== ENVIRONMENT FILES (CONFIDENTIAL) ==========
+.env
+.env.*
+!env.example
+!.env.sample
+
+# Explicitly ignore your secret env files
+.env.kick
+kick/Chatbot/.env.kick
+server/weaviate_rag/.env
+client/.env
+client/.env.local
+client/.env.production
+client/.env.development
+
+# ========== PYTHON & FASTAPI BACKEND ==========
+# Virtualenvs
+env/
+.venv/
+venv/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# FastAPI reload data
+*.db
+
+# ========== NODE / NEXT.JS FRONTEND ==========
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+dist/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========== DOCKER ==========
+# Prevent accidental inclusion of large context files
+**/.dockerignore
+
+# Caddy runtime files
+caddy_data/
+caddy_config/
+
+# ========== EDITOR / OS FILES ==========
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains
+.idea/
+
+# OS Junk files
+.DS_Store
+Thumbs.db
+
+# ========== MISC ==========
+# logs
+*.log
+
+# local test files
+*.tmp
+*.bak
