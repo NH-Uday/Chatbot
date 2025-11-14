@@ -1,6 +1,6 @@
 import os
-from app.services.embedder import embed_and_store
-from app.services.weaviate_setup import init_schema, client
+from weaviate_rag.app.services.embedder import embed_and_store
+from weaviate_rag.app.services.weaviate_setup import init_schema, client
 
 
 PDF_FOLDER = os.path.join(os.path.dirname(__file__), "docs")

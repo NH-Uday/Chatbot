@@ -5,11 +5,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = weaviate.connect_to_local(
-    host="localhost",
+    host="weaviate",     
     port=8080,
     grpc_port=50051,
     skip_init_checks=True,
 )
+
 
 def init_schema():
     class_name = "LectureChunk"

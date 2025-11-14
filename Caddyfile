@@ -1,0 +1,24 @@
+# /Caddyfile
+kick.uni-wuppertal.de {
+    encode zstd gzip
+
+    # API: /api/* -> FastAPI (backend)
+    @api path /api*
+    handle @api {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    # Everything else -> Next.js (frontend)
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    log {
+        output stdout
+        format console
+    }
+
+    # Email for Let's Encrypt
+    tls your.email@uni-wuppertal.de
+}

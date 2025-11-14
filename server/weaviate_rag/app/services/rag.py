@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-from app.services.weaviate_setup import client
+from .weaviate_setup import client
 
 load_dotenv()
 

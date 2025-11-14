@@ -1,0 +1,56 @@
+services:
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    restart: unless-stopped
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      CLUSTER_HOSTNAME: "node1"
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+
+  backend:
+    build:
+      context: ./server/weaviate_rag
+      dockerfile: Dockerfile
+    env_file:
+      - .env.kick
+    environment:
+      # Override to hit the weaviate container from inside Docker (if your code uses this var)
+      WEAVIATE_ENDPOINT: http://weaviate:8080
+    depends_on:
+      - weaviate
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        # Pass through to Dockerfile ARG
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
+    env_file:
+      - .env.kick
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  weaviate_data:
+  caddy_data:
+  caddy_config:

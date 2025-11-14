@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 from openai import OpenAI, APIError, RateLimitError
 from PIL import Image
 
-from app.services.weaviate_setup import init_schema, client
-from app.services.format_math_equation import format_equations_for_mathjax
+from .services.weaviate_setup import init_schema, client
+from .format_math_equation import format_equations_for_mathjax
 
 
 try:
